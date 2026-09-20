@@ -48,10 +48,10 @@ make_flix_week() {
     cat > "$week_dir/flix.toml" <<EOF
 [package]
 name        = "$week_name"
-description = "Standalone package for $week_name"
+description = ""
 version     = "0.1.0"
 flix        = "$flix_version"
-authors     = ["Mouhieddine Sabir <mouhieddinesabir@gmail.com>"]
+authors     = ["Mouhieddine Sabir"]
 EOF
 }
 

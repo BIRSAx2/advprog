@@ -13,7 +13,12 @@ parent(daniela, freja).
 
 grandparent(X, Y) :- parent(X, Z), parent(Z, Y).
 % ?- grandparent(emma, X).
+% X = oscar ? ;
+% X = freja ? ;
+% no
 % ?- grandparent(X, freja).
+% X = emma ? ;
+% no
 
 % ---------------------------------------------------------------------------
 % Exercise 03.02: enter the graph program
@@ -29,6 +34,9 @@ edge(b, c).
 path(X, Y) :- edge(X, Y).
 path(X, Z) :- edge(X, Y), path(Y, Z).
 % ?- path(a, X).
+% X = b ? ;
+% X = c ? ;
+% no
 
 % path(X, Z) :- path(X, Y), edge(Y, Z).
 % Still finds b then c on backtracking, since those are the real answers.
@@ -62,6 +70,7 @@ path(X, Z) :- edge(X, Y), path(Y, Z).
 ancestor(X, Y) :- ancestor(X, Z), parent(Z, Y).
 ancestor(X, Y) :- parent(X, Y).
 % ?- ancestor(emma, Y).
+% never returns - loops forever expanding ancestor(X, Z) before parent(Z, Y)
 
 % From now on, the Prolog programs you write should always terminate.
 
@@ -86,10 +95,10 @@ leq(s(X), s(Y)) :- leq(X, Y).
 
 min(X, Y, X) :- leq(X, Y).
 min(X, Y, Y) :- leq(Y, X), X \== Y.
-% ?- add(s(s(z)), s(z), R).
-% ?- sub(s(s(s(z))), s(z), R).
-% ?- mul(s(s(z)), s(s(s(z))), R).
-% ?- min(s(z), s(s(z)), R).
+% ?- add(s(s(z)), s(z), R).            % R = s(s(s(z)))
+% ?- sub(s(s(s(z))), s(z), R).         % R = s(s(z))
+% ?- mul(s(s(z)), s(s(s(z))), R).      % R = s(s(s(s(s(s(z))))))
+% ?- min(s(z), s(s(z)), R).            % R = s(z)
 
 % ---------------------------------------------------------------------------
 % Exercise 03.06: use Prolog to determine whether each equation/inequality
@@ -108,8 +117,8 @@ three(s(s(s(z)))).
 even(z).
 even(s(X)) :- odd(X).
 odd(s(X)) :- even(X).
-% ?- even(s(s(z))).
-% ?- odd(s(z)).
+% ?- even(s(s(z))).   % yes
+% ?- odd(s(z)).       % yes
 
 % ---------------------------------------------------------------------------
 % Exercise 03.08: implement the Fibonacci function. A list can be defined
@@ -125,7 +134,7 @@ fib(s(s(X)), F) :-
     fib(s(X), F1),
     fib(X, F2),
     add(F1, F2, F).
-% ?- fib(s(s(s(s(s(z))))), F).
+% ?- fib(s(s(s(s(s(z))))), F).   % F = s(s(s(s(s(z)))))
 
 % ---------------------------------------------------------------------------
 % Exercise 03.09: implement prefix(Xs, Ys) and suffix(Xs, Ys).
@@ -134,8 +143,8 @@ prefix([X | Xs], [X | Ys]) :- prefix(Xs, Ys).
 
 suffix(Xs, Xs).
 suffix(Xs, [_ | Ys]) :- suffix(Xs, Ys).
-% ?- prefix([1, 2], [1, 2, 3]).
-% ?- suffix([2, 3], [1, 2, 3]).
+% ?- prefix([1, 2], [1, 2, 3]).   % yes
+% ?- suffix([2, 3], [1, 2, 3]).   % yes
 
 % ---------------------------------------------------------------------------
 % Exercise 03.10: implement prefix and suffix in terms of append.
@@ -144,13 +153,13 @@ append_([X | Xs], Ys, [X | Zs]) :- append_(Xs, Ys, Zs).
 
 prefixApp(Xs, Ys) :- append_(Xs, _, Ys).
 suffixApp(Xs, Ys) :- append_(_, Xs, Ys).
-% ?- prefixApp([1, 2], [1, 2, 3]).
-% ?- suffixApp([2, 3], [1, 2, 3]).
+% ?- prefixApp([1, 2], [1, 2, 3]).   % yes
+% ?- suffixApp([2, 3], [1, 2, 3]).   % yes
 
 % ---------------------------------------------------------------------------
 % Exercise 03.11: implement memberOf in terms of append.
 memberOf(X, Ys) :- append_(_, [X | _], Ys).
-% ?- memberOf(2, [1, 2, 3]).
+% ?- memberOf(2, [1, 2, 3]).   % yes
 
 % ---------------------------------------------------------------------------
 % Exercise 03.12: implement two versions of reverse, one using append and
@@ -185,7 +194,7 @@ reverseAcc([X | Xs], Acc, Ys) :- reverseAcc(Xs, [X | Acc], Ys).
 substitute(_, _, [], []).
 substitute(A, B, [A | Xs], [B | Ys]) :- substitute(A, B, Xs, Ys).
 substitute(A, B, [X | Xs], [X | Ys]) :- X \== A, substitute(A, B, Xs, Ys).
-% ?- substitute(b, z, [a, b, c, b], R).
+% ?- substitute(b, z, [a, b, c, b], R).   % R = [a, z, c, z]
 
 % ---------------------------------------------------------------------------
 % Exercise 03.14: a binary tree of natural numbers can be defined as
@@ -238,6 +247,7 @@ postOrder(node(X, N, Y), L) :-
     postOrder(X, LX), postOrder(Y, LY),
     append_(LX, LY, L1), append_(L1, [N], L).
 % ?- inOrder(node(node(leaf, z, leaf), s(z), node(leaf, s(s(z)), leaf)), L).
+% L = [z, s(z), s(s(z))]
 
 % ---------------------------------------------------------------------------
 % Exercise 03.15: the following definition of remove for lists is
@@ -248,7 +258,7 @@ postOrder(node(X, N, Y), L) :-
 remove(_, [], []).
 remove(X, [X | Ys], Rs) :- remove(X, Ys, Rs).
 remove(X, [Y | Ys], [Y | Rs]) :- X \== Y, remove(X, Ys, Rs).
-% ?- remove(b, [a, b, c, b, d], R).
+% ?- remove(b, [a, b, c, b, d], R).   % R = [a, c, d]
 
 % ---------------------------------------------------------------------------
 % Exercise 03.16: for each pair of terms, compute a unifying substitution,
