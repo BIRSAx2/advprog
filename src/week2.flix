@@ -417,13 +417,19 @@ def reachableDatalog(g: Set[(Int32, Int32)], src: Int32, dst: Int32): Bool = {
     not Vector.isEmpty(results)
 }
 
+def adjacency(g: Set[(Int32, Int32)]): Map[Int32, Set[Int32]] =
+    Set.foldLeft((m, edge) -> match edge {
+        case (a, b) => Map.insertWith(Set.union, a, Set#{b}, m)
+    }, Map.empty(), g)
+
 def reachableFunctional(g: Set[(Int32, Int32)], src: Int32, dst: Int32): Bool = {
+    let adj = adjacency(g);
     def go(visited: Set[Int32], frontier: Set[Int32]): Set[Int32] =
         if (Set.isEmpty(frontier))
             visited
         else {
             let visited1 = Set.union(visited, frontier);
-            let next = frontier |> Set.flatMap(n -> g |> Set.filterMap(match (a, b) -> if (a == n) Some(b) else None));
+            let next = frontier |> Set.flatMap(n -> Map.getWithDefault(n, Set#{}, adj));
             let frontier1 = Set.difference(next, visited1);
             go(visited1, frontier1)
         };
@@ -431,6 +437,7 @@ def reachableFunctional(g: Set[(Int32, Int32)], src: Int32, dst: Int32): Bool = 
 }
 
 def reachableImperative(g: Set[(Int32, Int32)], src: Int32, dst: Int32): Bool = region rc {
+    let adj = adjacency(g);
     let visited = MutSet.empty(rc);
     let queue = MutDeque.empty(rc);
     MutSet.add(src, visited);
@@ -439,10 +446,10 @@ def reachableImperative(g: Set[(Int32, Int32)], src: Int32, dst: Int32): Bool = 
         match MutDeque.popFront(queue) {
             case None => ()
             case Some(n) =>
-                foreach ((a, b) <- g)
-                    if (a == n and not MutSet.memberOf(b, visited)) {
-                        MutSet.add(b, visited);
-                        MutDeque.pushBack(b, queue)
+                foreach (m <- Map.getWithDefault(n, Set#{}, adj))
+                    if (not MutSet.memberOf(m, visited)) {
+                        MutSet.add(m, visited);
+                        MutDeque.pushBack(m, queue)
                     } else ();
                 loop()
         };
@@ -466,28 +473,34 @@ def ex_02_10(): Unit \ IO = {
 //
 // Fastest to write: Datalog. Most elegant: Datalog.
 // Parallel functional: map/reduce over each round's frontier.
-// Parallel imperative: shard visited/queue per thread, or run BFS layers
-// concurrently with a barrier.
+// Parallel imperative: shard visited/queue per thread
 
 // Exercise 02.12: benchmark the three implementations from Exercise 02.10.
 def lineGraph(size: Int32): Set[(Int32, Int32)] =
     List.range(0, size) |> List.map(i -> (i, i + 1)) |> List.toSet
 
-def benchmark(name: String, f: Unit -> Bool \ ef): Unit \ (ef + Time.Clock + IO) = {
-    let t0 = Time.Clock.now();
-    let result = f();
-    let t1 = Time.Clock.now();
+mod Clock {
+    import java.lang.System
+    pub def millis(): Int64 \ IO = System.currentTimeMillis()
+}
+
+// `f` is Pure, so nothing stops the compiler from evaluating it at any point
+// using Ref to avoid this
+def benchmark(name: String, f: Unit -> Bool): Unit \ IO = region rc {
+    let box = Ref.fresh(rc, false);
+    let t0 = Clock.millis();
+    Ref.put(f(), box);
+    let result = Ref.get(box);
+    let t1 = Clock.millis();
     println("${name}: result = ${result}, elapsed = ${t1 - t0}ms")
 }
 
 def ex_02_12(): Unit \ IO = {
     println("\n\nExercise 02.12");
-    let g = lineGraph(2000);
-    Time.Clock.runWithIO(() -> {
-        benchmark("Datalog",    () -> reachableDatalog(g, 0, 2000));
-        benchmark("Functional", () -> reachableFunctional(g, 0, 2000));
-        benchmark("Imperative", () -> reachableImperative(g, 0, 2000))
-    })
+    let g = lineGraph(500);
+    benchmark("Datalog",    () -> reachableDatalog(g, 0, 500));
+    benchmark("Functional", () -> reachableFunctional(g, 0, 500));
+    benchmark("Imperative", () -> reachableImperative(g, 0, 500))
 }
 
 def runWeek2(): Unit \ IO =
