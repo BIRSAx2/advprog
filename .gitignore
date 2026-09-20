@@ -12,3 +12,12 @@
 *.xdv
 
 book
+
+# Flix build artifacts
+.flix/
+build/
+
+# Futhark build artifacts (from `futhark bench`/`futhark build`)
+src/week4
+src/week4.c
+src/data/
